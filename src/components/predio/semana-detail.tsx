@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { useSearchParams, notFound } from "next/navigation"
 import { ChevronLeftIcon, ChevronRightIcon, DroneIcon } from "lucide-react"
@@ -8,6 +9,14 @@ import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { PageHeader } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -39,22 +48,43 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
   const cultivo =
     searchParams.get("cultivo") ?? allCuarteles[0]?.cultivo ?? "Paltos"
   const metric = (searchParams.get("metric") as MetricKey) || "ndvi"
-  const cuartelIds = (searchParams.get("cuarteles") ?? "")
+  const cuartelIdsParam = (searchParams.get("cuarteles") ?? "")
     .split(",")
     .filter(Boolean)
 
-  const cuarteles = allCuarteles.filter(
+  const cuartelesCultivo = allCuarteles.filter(
     (c) =>
       c.cultivo === cultivo &&
-      (cuartelIds.length === 0 || cuartelIds.includes(c.id))
+      (cuartelIdsParam.length === 0 || cuartelIdsParam.includes(c.id))
   )
+
+  const [cuartelScope, setCuartelScope] = React.useState<string>("todo")
+
+  const visibleCuarteles =
+    cuartelScope === "todo"
+      ? cuartelesCultivo
+      : cuartelesCultivo.filter((c) => c.id === cuartelScope)
+
+  const selectedCuartel =
+    cuartelScope === "todo"
+      ? null
+      : cuartelesCultivo.find((c) => c.id === cuartelScope) ?? null
 
   const { weeks, drones } = buildTimeSeries(predioId, metric, cultivo)
   const point = weeks.find((w) => w.week === week)
   if (!point) notFound()
 
+  const actualValue =
+    selectedCuartel != null
+      ? (point.cuarteles[selectedCuartel.id] ?? point.promedioPredio)
+      : point.promedioPredio
+
+  const deltaValue = actualValue - point.medianaHistorica
+
   const hasDrones = drones.some(
-    (d) => d.week === week && cuarteles.some((c) => c.id === d.cuartelId)
+    (d) =>
+      d.week === week &&
+      visibleCuarteles.some((c) => c.id === d.cuartelId)
   )
 
   const query = searchParams.toString()
@@ -62,7 +92,6 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
   const droneHref = `/predio/${predioId}/semana/${week}/dron${qs}`
   const prevWeek = week > 1 ? week - 1 : null
   const nextWeek = week < weeks.length ? week + 1 : null
-  const deltaAvg = point.promedioPredio - point.medianaHistorica
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -75,7 +104,7 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
         ]}
       />
 
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
             Satélite · S{week}
@@ -84,51 +113,84 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
             {point.date} · {METRIC_META[metric].short} · {cultivo}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {prevWeek ? (
-            <Button
-              variant="outline"
-              size="sm"
-              render={<Link href={`/predio/${predioId}/semana/${prevWeek}${qs}`} />}
+
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Cuartel</Label>
+            <Select
+              value={cuartelScope}
+              onValueChange={(v) => {
+                if (v) setCuartelScope(v)
+              }}
             >
-              <ChevronLeftIcon data-icon="inline-start" />
-              Ant.
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" disabled>
-              <ChevronLeftIcon data-icon="inline-start" />
-              Ant.
-            </Button>
-          )}
-          {nextWeek ? (
-            <Button
-              variant="outline"
-              size="sm"
-              render={<Link href={`/predio/${predioId}/semana/${nextWeek}${qs}`} />}
-            >
-              Sig.
-              <ChevronRightIcon data-icon="inline-end" />
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" disabled>
-              Sig.
-              <ChevronRightIcon data-icon="inline-end" />
-            </Button>
-          )}
+              <SelectTrigger className="min-w-[12rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todo">Todo el predio</SelectItem>
+                {cuartelesCultivo.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {prevWeek ? (
+              <Button
+                variant="outline"
+                size="sm"
+                render={
+                  <Link href={`/predio/${predioId}/semana/${prevWeek}${qs}`} />
+                }
+              >
+                <ChevronLeftIcon data-icon="inline-start" />
+                Ant.
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" disabled>
+                <ChevronLeftIcon data-icon="inline-start" />
+                Ant.
+              </Button>
+            )}
+            {nextWeek ? (
+              <Button
+                variant="outline"
+                size="sm"
+                render={
+                  <Link href={`/predio/${predioId}/semana/${nextWeek}${qs}`} />
+                }
+              >
+                Sig.
+                <ChevronRightIcon data-icon="inline-end" />
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" disabled>
+                Sig.
+                <ChevronRightIcon data-icon="inline-end" />
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 
       <div
         className={`rounded-lg border px-4 py-3 text-sm ${
-          deltaAvg < -0.01
+          deltaValue < -0.01
             ? "border-red-200 bg-red-50 text-red-900"
-            : deltaAvg > 0.01
+            : deltaValue > 0.01
               ? "border-green-200 bg-green-50 text-green-900"
               : "border-border bg-muted/40 text-muted-foreground"
         }`}
       >
-        Δ predio vs mediana histórica:{" "}
-        <span className="font-semibold tabular-nums">{formatNdvi(deltaAvg)}</span>
+        {selectedCuartel
+          ? `Δ ${selectedCuartel.nombre} vs mediana histórica: `
+          : "Δ predio vs mediana histórica: "}
+        <span className="font-semibold tabular-nums">
+          {formatNdvi(deltaValue)}
+        </span>
       </div>
 
       <section className="grid gap-6 sm:grid-cols-2">
@@ -139,8 +201,8 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
           variant="historic"
         />
         <MapBlock
-          title="Actual"
-          value={point.promedioPredio}
+          title={selectedCuartel ? `Actual · ${selectedCuartel.nombre}` : "Actual"}
+          value={actualValue}
           metric={metric}
           variant="current"
         />
@@ -168,7 +230,10 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
 
       <Card className="py-0">
         <CardHeader className="border-b py-4">
-          <CardTitle className="text-base font-medium">Valores</CardTitle>
+          <CardTitle className="text-base font-medium">
+            Valores
+            {selectedCuartel ? ` · ${selectedCuartel.nombre}` : ""}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -180,7 +245,7 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cuarteles.map((c) => {
+              {visibleCuarteles.map((c) => {
                 const val = point.cuarteles[c.id]
                 const delta = val - point.medianaHistorica
                 return (
