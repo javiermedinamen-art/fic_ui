@@ -1,9 +1,16 @@
 import { Suspense } from "react"
 
 import { SemanaDetail } from "@/components/predio/semana-detail"
+import { PREDIOS } from "@/lib/db"
 
 type PageProps = {
   params: Promise<{ id: string; week: string }>
+}
+
+const WEEKS = Array.from({ length: 26 }, (_, i) => String(i + 1))
+
+export function generateStaticParams() {
+  return PREDIOS.flatMap((p) => WEEKS.map((week) => ({ id: p.id, week })))
 }
 
 export default async function SemanaPage({ params }: PageProps) {

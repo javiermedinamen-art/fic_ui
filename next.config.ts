@@ -1,7 +1,18 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
+
+const isGithubPages = process.env.GITHUB_PAGES === "true"
+const repo = "fic_ui"
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  output: "export",
+  trailingSlash: true,
+  images: { unoptimized: true },
+  ...(isGithubPages
+    ? {
+        basePath: `/${repo}`,
+        assetPrefix: `/${repo}/`,
+      }
+    : {}),
+}
 
-export default nextConfig;
+export default nextConfig

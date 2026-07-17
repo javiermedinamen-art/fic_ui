@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation"
+import { CarteraView } from "@/components/cartera/cartera-view"
 
 export default function Home() {
-  redirect("/cartera")
+  return <CarteraView />
 }
