@@ -16,15 +16,15 @@ import {
 } from "@/components/ui/hover-card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  tabsListVariants,
+} from "@/components/ui/tabs"
+import { cn } from "@/lib/utils"
 import {
   Table,
   TableBody,
@@ -329,65 +329,13 @@ export function CarteraView() {
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader crumbs={[{ label: "Home", href: "/" }, { label: "Cartera" }]} />
 
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Hola, {ASESOR.nombre.split(" ")[0]}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Prioriza predios con peor desviación y abre su monitoreo.
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <Label className="text-xs">Métrica satelital</Label>
-            <HoverCard>
-              <HoverCardTrigger
-                render={
-                  <button
-                    type="button"
-                    className="inline-flex text-muted-foreground hover:text-foreground"
-                    aria-label={`Qué es ${metricMeta.label}`}
-                  />
-                }
-              >
-                <InfoIcon className="size-3.5" />
-              </HoverCardTrigger>
-              <HoverCardContent side="bottom" align="end" className="w-72 text-xs leading-relaxed">
-                <p className="font-medium">{metricMeta.label}</p>
-                <p className="mt-1 text-muted-foreground">
-                  {metricMeta.description}
-                </p>
-                <p className="mt-2 text-muted-foreground">
-                  En cartera se muestra la desviación (Δ) respecto al histórico
-                  del cuartel.
-                </p>
-              </HoverCardContent>
-            </HoverCard>
-          </div>
-          <Select
-            value={metric}
-            onValueChange={(v) => {
-              if (v && v in METRIC_META) {
-                setMetric(v as MetricKey)
-                setSortKey("metric")
-                setSortDir("asc")
-              }
-            }}
-          >
-            <SelectTrigger className="min-w-[11rem]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(METRIC_META) as MetricKey[]).map((k) => (
-                <SelectItem key={k} value={k}>
-                  {METRIC_META[k].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <section className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          Hola, {ASESOR.nombre.split(" ")[0]}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Prioriza predios con peor desviación y abre su monitoreo.
+        </p>
       </section>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -417,17 +365,92 @@ export function CarteraView() {
                 }
               }}
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <TabsList>
-                  <TabsTrigger value="predio">Predio</TabsTrigger>
-                  <TabsTrigger value="agricultor">Agricultor</TabsTrigger>
-                  <TabsTrigger value="comuna">Comuna</TabsTrigger>
-                </TabsList>
-                <p className="text-xs text-muted-foreground">
-                  {visibleCount} resultado{visibleCount === 1 ? "" : "s"}
-                  {" · "}
-                  ordenado por Δ {metricMeta.short} (peor primero)
-                </p>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <TabsList>
+                    <TabsTrigger value="predio">Predio</TabsTrigger>
+                    <TabsTrigger value="agricultor">Agricultor</TabsTrigger>
+                    <TabsTrigger value="comuna">Comuna</TabsTrigger>
+                  </TabsList>
+
+                  <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                    <div
+                      role="group"
+                      aria-label="Métrica"
+                      className={cn(tabsListVariants({ variant: "default" }), "h-8")}
+                    >
+                      {(Object.keys(METRIC_META) as MetricKey[]).map((k) => {
+                        const active = metric === k
+                        return (
+                          <button
+                            key={k}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => {
+                              setMetric(k)
+                              setSortKey("metric")
+                              setSortDir("asc")
+                            }}
+                            className={cn(
+                              "inline-flex h-[calc(100%-1px)] items-center justify-center rounded-md px-2 py-0.5 text-sm font-medium transition-all",
+                              active
+                                ? "bg-background text-foreground shadow-sm"
+                                : "text-foreground/60 hover:text-foreground"
+                            )}
+                          >
+                            {METRIC_META[k].short}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <HoverCard>
+                      <HoverCardTrigger
+                        render={
+                          <button
+                            type="button"
+                            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                            aria-label={`Qué es ${metricMeta.label}`}
+                          />
+                        }
+                      >
+                        <InfoIcon className="size-3.5" />
+                      </HoverCardTrigger>
+                      <HoverCardContent
+                        side="bottom"
+                        align="end"
+                        className="w-72 text-xs leading-relaxed"
+                      >
+                        <p className="font-medium">{metricMeta.label}</p>
+                        <p className="mt-1 text-muted-foreground">
+                          {metricMeta.description}
+                        </p>
+                        <p className="mt-2 text-muted-foreground">
+                          La columna Δ muestra la desviación frente al
+                          histórico del cuartel para esta métrica.
+                        </p>
+                      </HoverCardContent>
+                    </HoverCard>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {visibleCount} resultado{visibleCount === 1 ? "" : "s"}
+                    {" · "}
+                    ordenado por Δ {metricMeta.short} (peor primero)
+                  </p>
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="size-2 rounded-full bg-red-500" /> Negativo
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="size-2 rounded-full bg-neutral-400" /> Neutro
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="size-2 rounded-full bg-green-600" /> Positivo
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {activeChips.length > 0 ? (
@@ -461,40 +484,6 @@ export function CarteraView() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
-              </div>
-
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                  Δ {metricMeta.short}
-                  <HoverCard>
-                    <HoverCardTrigger
-                      render={
-                        <button
-                          type="button"
-                          className="inline-flex text-muted-foreground hover:text-foreground"
-                          aria-label={`Definición de ${metricMeta.label}`}
-                        />
-                      }
-                    >
-                      <InfoIcon className="size-3" />
-                    </HoverCardTrigger>
-                    <HoverCardContent side="top" className="w-72 text-xs leading-relaxed">
-                      <p className="font-medium">{metricMeta.label}</p>
-                      <p className="mt-1 text-muted-foreground">
-                        {metricMeta.description}
-                      </p>
-                    </HoverCardContent>
-                  </HoverCard>
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="size-2 rounded-full bg-red-500" /> Negativo
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="size-2 rounded-full bg-neutral-400" /> Neutro
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="size-2 rounded-full bg-green-600" /> Positivo
-                </span>
               </div>
 
               <TabsContent value="predio" className="mt-1">
