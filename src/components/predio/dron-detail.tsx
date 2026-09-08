@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import { useSearchParams, notFound } from "next/navigation"
 
 import { AspectRatio } from "@/components/ui/aspect-ratio"
@@ -24,13 +25,35 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  availableDroneLayers,
+  droneImageUrl,
+  lidarPointcloudUrl,
+  type DroneImageLayer,
+} from "@/lib/drone-images"
+import { DroneColorLegend } from "@/components/predio/color-legend"
+import {
   buildTimeSeries,
   getCuartelesByPredio,
   getPredio,
   type MetricKey,
 } from "@/lib/db"
 
-type DronLayer = "rgb" | "ndvi" | "ndwi" | "termico" | "lidar"
+const LidarPointCloudViewer = dynamic(
+  () =>
+    import("@/components/predio/lidar-point-cloud-viewer").then(
+      (m) => m.LidarPointCloudViewer
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex aspect-video items-center justify-center rounded-xl bg-[#0c1210] text-sm text-white/80 ring-1 ring-foreground/10">
+        Preparando visor LiDAR…
+      </div>
+    ),
+  }
+)
+
+type DronLayer = DroneImageLayer
 
 const DRON_LAYERS: {
   id: DronLayer
@@ -41,43 +64,8 @@ const DRON_LAYERS: {
   { id: "ndvi", label: "NDVI", description: "Vigor vegetativo" },
   { id: "ndwi", label: "NDWI", description: "Contenido hídrico" },
   { id: "termico", label: "Térmico", description: "Temperatura de dosel" },
-  { id: "lidar", label: "LiDAR", description: "Altura / 3D" },
+  { id: "lidar", label: "LiDAR", description: "Nube de puntos 3D (máxima densidad)" },
 ]
-
-const LAYER_STYLE: Record<
-  DronLayer,
-  { background: string; overlay?: string; badge: string }
-> = {
-  rgb: {
-    background:
-      "linear-gradient(145deg, #86efac 0%, #4ade80 35%, #166534 70%, #854d0e 100%)",
-    overlay:
-      "radial-gradient(circle at 40% 35%, rgba(255,255,255,0.2), transparent 45%)",
-    badge: "RGB",
-  },
-  ndvi: {
-    background:
-      "linear-gradient(135deg, #fef08a 0%, #84cc16 40%, #15803d 75%, #14532d 100%)",
-    badge: "NDVI",
-  },
-  ndwi: {
-    background:
-      "linear-gradient(135deg, #fef3c7 0%, #67e8f9 40%, #0284c7 80%, #0c4a6e 100%)",
-    badge: "NDWI",
-  },
-  termico: {
-    background:
-      "linear-gradient(135deg, #1e3a8a 0%, #7c3aed 30%, #f97316 65%, #fef08a 100%)",
-    badge: "Térmico",
-  },
-  lidar: {
-    background:
-      "linear-gradient(160deg, #0f172a 0%, #334155 40%, #94a3b8 70%, #e2e8f0 100%)",
-    overlay:
-      "repeating-linear-gradient(90deg, transparent, transparent 24px, rgba(255,255,255,0.08) 24px, rgba(255,255,255,0.08) 25px), repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(255,255,255,0.08) 24px, rgba(255,255,255,0.08) 25px)",
-    badge: "LiDAR 3D",
-  },
-}
 
 function layerValue(base: number, layer: DronLayer, seed: number) {
   const offset = ((seed % 7) - 3) * 0.012
@@ -131,13 +119,46 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
 
   if (weekDrones.length === 0) notFound()
 
-  const [layer, setLayer] = React.useState<DronLayer>("rgb")
   const [cuartelId, setCuartelId] = React.useState(weekDrones[0].cuartelId)
 
   const active =
     weekDrones.find((d) => d.cuartelId === cuartelId) ?? weekDrones[0]
   const cuartel = cuarteles.find((c) => c.id === active.cuartelId)
-  const style = LAYER_STYLE[layer]
+  const flightDate = active.date
+
+  const rasterLayers = React.useMemo(
+    () => availableDroneLayers(predioId, flightDate),
+    [predioId, flightDate]
+  )
+
+  const visibleLayers = React.useMemo(
+    () => DRON_LAYERS.filter((l) => rasterLayers.includes(l.id)),
+    [rasterLayers]
+  )
+
+  const defaultLayer = React.useMemo<DronLayer>(
+    () =>
+      (rasterLayers.includes("rgb") && "rgb") || rasterLayers[0] || "lidar",
+    [rasterLayers]
+  )
+
+  const [layer, setLayer] = React.useState<DronLayer>(defaultLayer)
+
+  React.useEffect(() => {
+    if (layer !== "lidar" && !rasterLayers.includes(layer)) {
+      setLayer(defaultLayer)
+    }
+  }, [flightDate, predioId, defaultLayer, layer, rasterLayers])
+
+  const imageUrl =
+    flightDate && layer !== "lidar"
+      ? droneImageUrl(predioId, flightDate, layer)
+      : null
+  const lidarUrl =
+    flightDate && layer === "lidar"
+      ? lidarPointcloudUrl(predioId, flightDate)
+      : null
+
   const layerMeta = DRON_LAYERS.find((l) => l.id === layer)!
 
   const query = searchParams.toString()
@@ -161,7 +182,8 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
             Vuelo de dron · S{week}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {cuartel?.nombre} · {layerMeta.description}
+            {cuartel?.nombre}
+            {flightDate ? ` · ${flightDate}` : ""} · {layerMeta.description}
           </p>
         </div>
 
@@ -195,11 +217,11 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
       <Tabs
         value={layer}
         onValueChange={(v) => {
-          if (DRON_LAYERS.some((l) => l.id === v)) setLayer(v as DronLayer)
+          if (visibleLayers.some((l) => l.id === v)) setLayer(v as DronLayer)
         }}
       >
         <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
-          {DRON_LAYERS.map((l) => (
+          {visibleLayers.map((l) => (
             <TabsTrigger key={l.id} value={l.id} className="px-3">
               {l.label}
             </TabsTrigger>
@@ -208,40 +230,43 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
       </Tabs>
 
       <section>
-        <AspectRatio
-          ratio={16 / 9}
-          className="w-full overflow-hidden rounded-xl ring-1 ring-foreground/10"
-        >
-          <div
-            className="absolute inset-0"
-            style={{ background: style.background }}
-          >
-            {style.overlay ? (
-              <div
-                className="absolute inset-0"
-                style={{ backgroundImage: style.overlay }}
-              />
-            ) : null}
-            {layer === "lidar" ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="size-[55%] max-w-md rounded-lg border border-white/20 bg-white/5 shadow-2xl"
-                  style={{
-                    transform:
-                      "perspective(800px) rotateX(58deg) rotateZ(-18deg)",
-                    backgroundImage:
-                      "linear-gradient(135deg, rgba(148,163,184,0.5), rgba(15,23,42,0.8))",
-                    boxShadow:
-                      "0 40px 80px rgba(0,0,0,0.45), inset 0 0 40px rgba(255,255,255,0.08)",
-                  }}
+        {lidarUrl ? (
+          <LidarPointCloudViewer url={lidarUrl} />
+        ) : (
+          <>
+            <AspectRatio
+              ratio={16 / 9}
+              className="w-full overflow-hidden rounded-xl bg-muted ring-1 ring-foreground/10"
+            >
+              {imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={imageUrl}
+                  src={imageUrl}
+                  alt={`${layerMeta.label} · ${predio.nombre} · ${flightDate}`}
+                  className="absolute inset-0 size-full object-contain bg-black"
                 />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900 px-6 text-center text-slate-200">
+                  <p className="text-sm font-medium">
+                    {layer === "lidar"
+                      ? "No hay nube LiDAR para este vuelo."
+                      : "Sin imagen para esta capa en este vuelo."}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Predio {predio.codigo}
+                    {flightDate ? ` · ${flightDate}` : ""}
+                  </p>
+                </div>
+              )}
+              <div className="pointer-events-none absolute right-3 bottom-3 rounded-md bg-black/55 px-2.5 py-1 text-xs text-white">
+                {layerMeta.label} · {cuartel?.nombre}
+                {flightDate ? ` · ${flightDate}` : ""}
               </div>
-            ) : null}
-            <div className="absolute right-3 bottom-3 rounded-md bg-black/55 px-2.5 py-1 text-xs text-white">
-              {style.badge} · {cuartel?.nombre}
-            </div>
-          </div>
-        </AspectRatio>
+            </AspectRatio>
+            <DroneColorLegend layer={layer} className="mt-2" />
+          </>
+        )}
       </section>
 
       <Card className="py-0">

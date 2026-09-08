@@ -34,7 +34,8 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
 import type { Cuartel, MetricKey } from "@/lib/db"
-import { METRIC_META, buildTimeSeries } from "@/lib/db"
+import { METRIC_META, buildTimeSeries, getPredio } from "@/lib/db"
+import { PredioEvolutionPlayer } from "@/components/predio/predio-evolution-player"
 
 const CUARTEL_COLORS = [
   "var(--chart-1)",
@@ -296,17 +297,23 @@ export function PredioChartPanel({ predioId, cuarteles }: PredioChartPanelProps)
               Clic en un punto para abrir la semana.
             </p>
           </div>
-          <Tabs
-            value={mode}
-            onValueChange={(v) => {
-              if (v === "promedio" || v === "individual") setMode(v)
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value="promedio">Todo el predio</TabsTrigger>
-              <TabsTrigger value="individual">Por cuarteles</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex flex-wrap items-center gap-2">
+            <PredioEvolutionPlayer
+              predioId={predioId}
+              predioNombre={getPredio(predioId)?.nombre ?? predioId}
+            />
+            <Tabs
+              value={mode}
+              onValueChange={(v) => {
+                if (v === "promedio" || v === "individual") setMode(v)
+              }}
+            >
+              <TabsList>
+                <TabsTrigger value="promedio">Todo el predio</TabsTrigger>
+                <TabsTrigger value="individual">Por cuarteles</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="aspect-[16/7] w-full cursor-pointer">

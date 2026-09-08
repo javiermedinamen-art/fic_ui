@@ -33,6 +33,13 @@ import {
   getPredio,
   type MetricKey,
 } from "@/lib/db"
+import {
+  SatelliteColorLegend,
+} from "@/components/predio/color-legend"
+import {
+  satelliteImageUrl,
+  type SatelliteVariant,
+} from "@/lib/satellite-images"
 
 type SemanaDetailProps = {
   predioId: string
@@ -199,14 +206,19 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
           value={point.medianaHistorica}
           metric={metric}
           variant="historic"
+          predioId={predioId}
+          week={week}
         />
         <MapBlock
           title={selectedCuartel ? `Actual · ${selectedCuartel.nombre}` : "Actual"}
           value={actualValue}
           metric={metric}
           variant="current"
+          predioId={predioId}
+          week={week}
         />
       </section>
+      <SatelliteColorLegend metric={metric} />
 
       {hasDrones ? (
         <Link
@@ -283,12 +295,23 @@ function MapBlock({
   value,
   metric,
   variant,
+  predioId,
+  week,
 }: {
   title: string
   value: number
   metric: MetricKey
-  variant: "historic" | "current"
+  variant: SatelliteVariant
+  predioId: string
+  week: number
 }) {
+  const [failed, setFailed] = React.useState(false)
+  const src = satelliteImageUrl(predioId, week, metric, variant)
+
+  React.useEffect(() => {
+    setFailed(false)
+  }, [src])
+
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between">
@@ -299,19 +322,30 @@ function MapBlock({
       </div>
       <AspectRatio
         ratio={4 / 3}
-        className="overflow-hidden rounded-xl ring-1 ring-foreground/10"
+        className="overflow-hidden rounded-xl bg-muted ring-1 ring-foreground/10"
       >
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              variant === "current"
-                ? `radial-gradient(circle at 30% 40%, rgba(255,255,255,0.25), transparent 40%),
-                   linear-gradient(135deg, #fde047aa, #22c55ecc, #14532dcc)`
-                : `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.15), transparent 50%),
-                   linear-gradient(160deg, #fcd34daa, #84cc16cc, #166534cc)`,
-          }}
-        />
+        {!failed ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={src}
+            src={src}
+            alt={`${title} · ${METRIC_META[metric].short} · S${week}`}
+            className="absolute inset-0 size-full object-contain bg-black"
+            onError={() => setFailed(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-900 px-4 text-center text-slate-200">
+            <p className="text-xs font-medium">
+              Sin raster {variant === "historic" ? "histórico" : "actual"}
+            </p>
+            <p className="text-[11px] text-slate-400">
+              {METRIC_META[metric].short} · S{week} · {predioId}
+            </p>
+          </div>
+        )}
+        <div className="pointer-events-none absolute right-2 bottom-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-white">
+          S2 · {METRIC_META[metric].short} · S{week} · stretch fijo
+        </div>
       </AspectRatio>
     </div>
   )

@@ -1,3 +1,17 @@
+import {
+  VASQUEZ_AGRICULTORES,
+  VASQUEZ_ASESOR,
+  VASQUEZ_COMUNAS,
+  VASQUEZ_CUARTELES,
+  VASQUEZ_CUARTEL_SERIES,
+  VASQUEZ_CULTIVOS,
+  VASQUEZ_DRONES,
+  VASQUEZ_PREDIOS,
+  VASQUEZ_SERIES,
+  VASQUEZ_WEEK_DATE,
+} from "@/lib/vasquez-data"
+import { LIDAR_CLOUD_MANIFEST } from "@/lib/drone-images"
+
 export type MetricKey = "ndvi" | "ndre" | "ndmi" | "gndvi"
 
 export const METRIC_META: Record<
@@ -8,28 +22,28 @@ export const METRIC_META: Record<
     label: "NDVI",
     short: "NDVI",
     description:
-      "Normalized Difference Vegetation Index. Estima vigor vegetativo a partir de reflectancia en rojo e infrarrojo cercano. Valores altos indican mayor actividad fotosintética.",
+      "Normalized Difference Vegetation Index (Sentinel-2). Estima vigor vegetativo a partir de reflectancia en rojo e infrarrojo cercano.",
     unit: "índice",
   },
   ndre: {
-    label: "NDRE",
-    short: "NDRE",
+    label: "Red edge (nm)",
+    short: "REDEDGE",
     description:
-      "Normalized Difference Red Edge. Más sensible a clorofila en doseles densos; útil en etapas avanzadas del cultivo.",
-    unit: "índice",
+      "Posición del red edge (Sentinel-2, nm). Proxy de clorofila / estado del dosel; escala fija 700–750 nm.",
+    unit: "nm",
   },
   ndmi: {
     label: "NDMI",
     short: "NDMI",
     description:
-      "Normalized Difference Moisture Index. Relacionado con contenido de agua en la vegetación y estrés hídrico.",
+      "Normalized Difference Moisture Index (Sentinel-2). Relacionado con contenido de agua en la vegetación.",
     unit: "índice",
   },
   gndvi: {
     label: "GNDVI",
     short: "GNDVI",
     description:
-      "Green NDVI. Variante del NDVI que usa la banda verde; suele correlacionarse con nitrógeno foliar.",
+      "Green NDVI (Sentinel-2). Variante del NDVI que usa la banda verde.",
     unit: "índice",
   },
 }
@@ -89,125 +103,21 @@ export type DroneObservation = {
   value: number
   layerUrl: string
   label: string
+  /** Fecha del vuelo (YYYY-MM-DD), clave para rasters en /public/drone */
+  date: string
 }
 
-export const ASESOR: Asesor = {
-  id: "asesor-01",
-  nombre: "Camila Mendoza",
-  iniciales: "CM",
-}
+export const ASESOR: Asesor = { ...VASQUEZ_ASESOR }
 
-export const CULTIVOS = [
-  "Paltos",
-  "Cítricos",
-  "Uva de mesa",
-  "Nogales",
-  "Olivos",
-  "Cerezos",
-] as const
+export const CULTIVOS = [...VASQUEZ_CULTIVOS]
 
-export const COMUNAS = [
-  "Quillota",
-  "La Cruz",
-  "Nogales",
-  "Hijuelas",
-  "Limache",
-  "Olmue",
-  "San Felipe",
-  "Los Andes",
-] as const
+export const COMUNAS = [...VASQUEZ_COMUNAS]
 
-export const AGRICULTORES: Agricultor[] = [
-  { id: "ag-01", nombre: "Pedro González" },
-  { id: "ag-02", nombre: "María López" },
-  { id: "ag-03", nombre: "Ana Torres" },
-  { id: "ag-04", nombre: "Carlos Rivas" },
-  { id: "ag-05", nombre: "Lucía Vargas" },
-  { id: "ag-06", nombre: "Jorge Castillo" },
-  { id: "ag-07", nombre: "Elena Soto" },
-  { id: "ag-08", nombre: "Diego Fuentes" },
-  { id: "ag-09", nombre: "Patricia Núñez" },
-  { id: "ag-10", nombre: "Andrés Pizarro" },
-  { id: "ag-11", nombre: "Sofía Herrera" },
-  { id: "ag-12", nombre: "Miguel Bravo" },
-]
+export const AGRICULTORES: Agricultor[] = [...VASQUEZ_AGRICULTORES]
 
-export const PREDIOS: Predio[] = [
-  { id: "pr-01", codigo: "PR-QLT-001", nombre: "Los Olivos", agricultorId: "ag-01", comuna: "Quillota", region: "Valparaíso", mixtura: "mixto", lat: -32.88, lng: -71.25 },
-  { id: "pr-02", codigo: "PR-QLT-002", nombre: "Santa Rosa", agricultorId: "ag-01", comuna: "Quillota", region: "Valparaíso", mixtura: "mono", lat: -32.9, lng: -71.22 },
-  { id: "pr-03", codigo: "PR-LCZ-003", nombre: "El Mirador", agricultorId: "ag-02", comuna: "La Cruz", region: "Valparaíso", mixtura: "mixto", lat: -32.82, lng: -71.23 },
-  { id: "pr-04", codigo: "PR-LCZ-004", nombre: "Las Palmas", agricultorId: "ag-02", comuna: "La Cruz", region: "Valparaíso", mixtura: "mono", lat: -32.81, lng: -71.2 },
-  { id: "pr-05", codigo: "PR-NOG-005", nombre: "San José", agricultorId: "ag-03", comuna: "Nogales", region: "Valparaíso", mixtura: "mixto", lat: -32.73, lng: -71.2 },
-  { id: "pr-06", codigo: "PR-NOG-006", nombre: "La Esperanza", agricultorId: "ag-03", comuna: "Nogales", region: "Valparaíso", mixtura: "mono", lat: -32.74, lng: -71.18 },
-  { id: "pr-07", codigo: "PR-HIJ-007", nombre: "Fundo Altos", agricultorId: "ag-04", comuna: "Hijuelas", region: "Valparaíso", mixtura: "mixto", lat: -32.8, lng: -71.15 },
-  { id: "pr-08", codigo: "PR-HIJ-008", nombre: "El Roble", agricultorId: "ag-04", comuna: "Hijuelas", region: "Valparaíso", mixtura: "mono", lat: -32.79, lng: -71.12 },
-  { id: "pr-09", codigo: "PR-LIM-009", nombre: "Vista Hermosa", agricultorId: "ag-05", comuna: "Limache", region: "Valparaíso", mixtura: "mixto", lat: -33.01, lng: -71.27 },
-  { id: "pr-10", codigo: "PR-LIM-010", nombre: "Los Lingues", agricultorId: "ag-05", comuna: "Limache", region: "Valparaíso", mixtura: "mono", lat: -33.02, lng: -71.25 },
-  { id: "pr-11", codigo: "PR-OLM-011", nombre: "Santa Inés", agricultorId: "ag-06", comuna: "Olmue", region: "Valparaíso", mixtura: "mixto", lat: -33.0, lng: -71.18 },
-  { id: "pr-12", codigo: "PR-OLM-012", nombre: "El Sauce", agricultorId: "ag-06", comuna: "Olmue", region: "Valparaíso", mixtura: "mono", lat: -32.99, lng: -71.16 },
-  { id: "pr-13", codigo: "PR-SFE-013", nombre: "Las Brisas", agricultorId: "ag-07", comuna: "San Felipe", region: "Valparaíso", mixtura: "mixto", lat: -32.75, lng: -70.73 },
-  { id: "pr-14", codigo: "PR-SFE-014", nombre: "Don Manuel", agricultorId: "ag-07", comuna: "San Felipe", region: "Valparaíso", mixtura: "mono", lat: -32.76, lng: -70.7 },
-  { id: "pr-15", codigo: "PR-AND-015", nombre: "Cerro Verde", agricultorId: "ag-08", comuna: "Los Andes", region: "Valparaíso", mixtura: "mixto", lat: -32.83, lng: -70.6 },
-  { id: "pr-16", codigo: "PR-AND-016", nombre: "La Cascada", agricultorId: "ag-08", comuna: "Los Andes", region: "Valparaíso", mixtura: "mono", lat: -32.84, lng: -70.58 },
-  { id: "pr-17", codigo: "PR-QLT-017", nombre: "Parcela 12", agricultorId: "ag-09", comuna: "Quillota", region: "Valparaíso", mixtura: "mixto", lat: -32.87, lng: -71.28 },
-  { id: "pr-18", codigo: "PR-LCZ-018", nombre: "Los Aromos", agricultorId: "ag-09", comuna: "La Cruz", region: "Valparaíso", mixtura: "mono", lat: -32.83, lng: -71.21 },
-  { id: "pr-19", codigo: "PR-NOG-019", nombre: "San Pedro", agricultorId: "ag-10", comuna: "Nogales", region: "Valparaíso", mixtura: "mixto", lat: -32.72, lng: -71.19 },
-  { id: "pr-20", codigo: "PR-HIJ-020", nombre: "El Arrayán", agricultorId: "ag-10", comuna: "Hijuelas", region: "Valparaíso", mixtura: "mono", lat: -32.78, lng: -71.14 },
-  { id: "pr-21", codigo: "PR-LIM-021", nombre: "La Quinta", agricultorId: "ag-11", comuna: "Limache", region: "Valparaíso", mixtura: "mixto", lat: -33.0, lng: -71.26 },
-  { id: "pr-22", codigo: "PR-OLM-022", nombre: "Fundo Norte", agricultorId: "ag-11", comuna: "Olmue", region: "Valparaíso", mixtura: "mono", lat: -32.98, lng: -71.17 },
-  { id: "pr-23", codigo: "PR-SFE-023", nombre: "Los Peumos", agricultorId: "ag-12", comuna: "San Felipe", region: "Valparaíso", mixtura: "mixto", lat: -32.74, lng: -70.72 },
-  { id: "pr-24", codigo: "PR-AND-024", nombre: "Santa Clara", agricultorId: "ag-12", comuna: "Los Andes", region: "Valparaíso", mixtura: "mono", lat: -32.85, lng: -70.59 },
-]
+export const PREDIOS: Predio[] = VASQUEZ_PREDIOS.map((p) => ({ ...p }))
 
-function seededRandom(seed: number) {
-  let s = seed
-  return () => {
-    s = (s * 16807) % 2147483647
-    return (s - 1) / 2147483646
-  }
-}
-
-function buildCuarteles(): Cuartel[] {
-  const rand = seededRandom(42)
-  const rows: Cuartel[] = []
-  let n = 1
-
-  for (const predio of PREDIOS) {
-    const cuartelCount = 3 + Math.floor(rand() * 4)
-    const cultivosPredio =
-      predio.mixtura === "mono"
-        ? [CULTIVOS[Math.floor(rand() * CULTIVOS.length)]]
-        : [
-            CULTIVOS[Math.floor(rand() * CULTIVOS.length)],
-            CULTIVOS[Math.floor(rand() * CULTIVOS.length)],
-          ].filter((v, i, a) => a.indexOf(v) === i)
-
-    if (cultivosPredio.length === 1 && predio.mixtura === "mixto") {
-      cultivosPredio.push(
-        CULTIVOS[(CULTIVOS.indexOf(cultivosPredio[0] as (typeof CULTIVOS)[number]) + 2) % CULTIVOS.length]
-      )
-    }
-
-    for (let i = 0; i < cuartelCount; i++) {
-      const cultivo = cultivosPredio[i % cultivosPredio.length]
-      const hectareas = +(1.2 + rand() * 14).toFixed(1)
-      const ndviDesviacion = +((rand() - 0.48) * 0.42).toFixed(3)
-
-      rows.push({
-        id: `cu-${String(n).padStart(3, "0")}`,
-        predioId: predio.id,
-        nombre: `Cuartel ${String.fromCharCode(65 + i)}`,
-        cultivo,
-        hectareas,
-        ndviDesviacion,
-      })
-      n += 1
-    }
-  }
-  return rows
-}
-
-export const CUARTELES = buildCuarteles()
+export const CUARTELES: Cuartel[] = VASQUEZ_CUARTELES.map((c) => ({ ...c }))
 
 export function getAgricultor(id: string) {
   return AGRICULTORES.find((a) => a.id === id)
@@ -226,15 +136,123 @@ export function getPredioSuperficie(predioId: string) {
   return getCuartelesByPredio(predioId).reduce((s, c) => s + c.hectareas, 0)
 }
 
-function metricBaseline(metric: MetricKey, week: number, rand: () => number) {
-  const seasonal = 0.55 + 0.18 * Math.sin(((week - 8) / 52) * Math.PI * 2)
-  const noise = (rand() - 0.5) * 0.04
-  const offset =
-    metric === "ndvi" ? 0 : metric === "ndre" ? -0.05 : metric === "ndmi" ? -0.08 : -0.03
-  return +(seasonal + offset + noise).toFixed(3)
+type SeriesWeek = {
+  historical_median: number | null
+  value_2026: number | null
 }
 
-/** Serie semanal año actual + mediana histórica regional */
+function seriesFor(predioId: string, metric: MetricKey): Record<string, SeriesWeek> {
+  const byPredio = VASQUEZ_SERIES[predioId as keyof typeof VASQUEZ_SERIES]
+  if (!byPredio) return {}
+  return (byPredio[metric] ?? {}) as Record<string, SeriesWeek>
+}
+
+function cuartelSeriesFor(
+  predioId: string,
+  cuartelId: string,
+  metric: MetricKey
+): Record<string, SeriesWeek> {
+  const byPredio =
+    VASQUEZ_CUARTEL_SERIES[predioId as keyof typeof VASQUEZ_CUARTEL_SERIES]
+  if (!byPredio) return {}
+  const byCu =
+    byPredio[cuartelId as keyof typeof byPredio] as
+      | Record<MetricKey, Record<string, SeriesWeek>>
+      | undefined
+  if (!byCu) return {}
+  return (byCu[metric] ?? {}) as Record<string, SeriesWeek>
+}
+
+function weekValue(
+  series: Record<string, SeriesWeek>,
+  week: number
+): SeriesWeek | null {
+  return series[String(week)] ?? series[week as unknown as string] ?? null
+}
+
+function pickCurrent(point: SeriesWeek | null): number | null {
+  if (!point) return null
+  if (point.value_2026 != null) return point.value_2026
+  return null
+}
+
+function pickHist(point: SeriesWeek | null): number | null {
+  if (!point) return null
+  if (point.historical_median != null) return point.historical_median
+  return point.value_2026
+}
+
+/**
+ * Jerarquía: cada cuartel usa su media zonal Sentinel-2.
+ * El promedio del predio (para el cultivo filtrado) es el promedio ponderado por ha.
+ */
+function buildMetricWeek(
+  predioId: string,
+  metric: MetricKey,
+  week: number,
+  cuarteles: Cuartel[]
+): {
+  medianaHistorica: number
+  cuartelValues: Record<string, number>
+  promedioPredio: number
+} | null {
+  const predioPoint = weekValue(seriesFor(predioId, metric), week)
+
+  const cuartelValues: Record<string, number> = {}
+  const cuartelHist: Record<string, number> = {}
+  let weightSum = 0
+  let valueSum = 0
+  let histSum = 0
+  let histWeight = 0
+
+  for (const c of cuarteles) {
+    const point = weekValue(cuartelSeriesFor(predioId, c.id, metric), week)
+    const current = pickCurrent(point)
+    const hist = pickHist(point)
+
+    // Fallback AOI solo si el cuartel no tiene píxeles válidos esa semana
+    const fallbackCurrent = pickCurrent(predioPoint)
+    const fallbackHist = pickHist(predioPoint)
+
+    const v = current ?? fallbackCurrent
+    const h = hist ?? fallbackHist
+    if (v == null && h == null) continue
+
+    const value = +(v ?? h ?? 0).toFixed(4)
+    cuartelValues[c.id] = value
+    if (h != null) {
+      cuartelHist[c.id] = +h.toFixed(4)
+      histSum += h * c.hectareas
+      histWeight += c.hectareas
+    }
+
+    valueSum += value * c.hectareas
+    weightSum += c.hectareas
+  }
+
+  if (!weightSum) {
+    // sin cuarteles: usar AOI predio
+    if (!predioPoint) return null
+    const medianaHistorica = +(
+      pickHist(predioPoint) ??
+      pickCurrent(predioPoint) ??
+      0
+    ).toFixed(4)
+    const promedioPredio = +(
+      pickCurrent(predioPoint) ?? medianaHistorica
+    ).toFixed(4)
+    return { medianaHistorica, cuartelValues: {}, promedioPredio }
+  }
+
+  const promedioPredio = +(valueSum / weightSum).toFixed(4)
+  const medianaHistorica = histWeight
+    ? +(histSum / histWeight).toFixed(4)
+    : +(pickHist(predioPoint) ?? promedioPredio).toFixed(4)
+
+  return { medianaHistorica, cuartelValues, promedioPredio }
+}
+
+/** Serie semanal año actual + mediana histórica (Sentinel-2 fic_agro). */
 export function buildTimeSeries(
   predioId: string,
   metric: MetricKey,
@@ -242,72 +260,86 @@ export function buildTimeSeries(
   secondary?: MetricKey
 ): { weeks: WeeklyPoint[]; drones: DroneObservation[] } {
   const cuarteles = getCuartelesByPredio(predioId).filter((c) => c.cultivo === cultivo)
-  const rand = seededRandom(
-    predioId.split("").reduce((a, c) => a + c.charCodeAt(0), metric.length * 17)
-  )
+  const series = seriesFor(predioId, metric)
+  const weekSet = new Set<number>()
+  for (const w of Object.keys(series)) weekSet.add(Number(w))
+  for (const c of cuarteles) {
+    for (const w of Object.keys(cuartelSeriesFor(predioId, c.id, metric))) {
+      weekSet.add(Number(w))
+    }
+  }
+  const weekNums = [...weekSet]
+    .filter((w) => Number.isFinite(w))
+    .sort((a, b) => a - b)
 
   const weeks: WeeklyPoint[] = []
-  const drones: DroneObservation[] = []
 
-  for (let week = 1; week <= 26; week++) {
-    const medianaHistorica = metricBaseline(metric, week, rand)
-    const cuartelValues: Record<string, number> = {}
-    let sum = 0
-
-    for (const c of cuarteles) {
-      const drift = c.ndviDesviacion * (0.6 + rand() * 0.8)
-      const v = +(medianaHistorica + drift + (rand() - 0.5) * 0.03).toFixed(3)
-      cuartelValues[c.id] = v
-      sum += v
-    }
-
-    const promedioPredio = cuarteles.length ? +(sum / cuarteles.length).toFixed(3) : 0
+  for (const week of weekNums) {
+    const primary = buildMetricWeek(predioId, metric, week, cuarteles)
+    if (!primary) continue
 
     let secondaryMap: Record<string, number> | undefined
     let secondaryPromedio: number | undefined
     let secondaryMediana: number | undefined
 
     if (secondary) {
-      secondaryMediana = metricBaseline(secondary, week, rand)
-      secondaryMap = {}
-      let s2 = 0
-      for (const c of cuarteles) {
-        const v = +(
-          (secondaryMediana ?? 0) +
-          c.ndviDesviacion * 0.5 +
-          (rand() - 0.5) * 0.025
-        ).toFixed(3)
-        secondaryMap[c.id] = v
-        s2 += v
+      const sec = buildMetricWeek(predioId, secondary, week, cuarteles)
+      if (sec) {
+        secondaryMap = sec.cuartelValues
+        secondaryPromedio = sec.promedioPredio
+        secondaryMediana = sec.medianaHistorica
       }
-      secondaryPromedio = cuarteles.length ? +(s2 / cuarteles.length).toFixed(3) : 0
     }
 
-    const month = Math.ceil(week / 4.34)
-    const day = ((week - 1) % 4) * 7 + 3
+    const date =
+      VASQUEZ_WEEK_DATE[String(week) as keyof typeof VASQUEZ_WEEK_DATE] ??
+      `2026-W${String(week).padStart(2, "0")}`
+
     weeks.push({
       week,
       label: `S${week}`,
-      date: `2026-${String(Math.min(month, 6)).padStart(2, "0")}-${String(Math.min(day, 28)).padStart(2, "0")}`,
-      medianaHistorica,
-      cuarteles: cuartelValues,
-      promedioPredio,
+      date,
+      medianaHistorica: primary.medianaHistorica,
+      cuarteles: primary.cuartelValues,
+      promedioPredio: primary.promedioPredio,
       secondary: secondaryMap,
       secondaryPromedio,
       secondaryMediana,
     })
+  }
 
-    // Vuelos de dron esporádicos (no serie continua)
-    if (week % 5 === 0 && cuarteles.length) {
-      const c = cuarteles[Math.floor(rand() * cuarteles.length)]
+  const rawDrones = VASQUEZ_DRONES[predioId as keyof typeof VASQUEZ_DRONES] ?? []
+  const cultivoIds = new Set(cuarteles.map((c) => c.id))
+  const drones: DroneObservation[] = rawDrones
+    .filter((d) => cultivoIds.has(d.cuartelId))
+    .map((d) => ({
+      id: d.id,
+      week: d.week,
+      cuartelId: d.cuartelId,
+      metric: d.metric as MetricKey,
+      value: d.value,
+      layerUrl: d.layerUrl,
+      label: d.label,
+      date: "date" in d && typeof d.date === "string" ? d.date : "",
+    }))
+
+  // Asegura semanas con nube LiDAR aunque no haya orto RGB/NDVI ese día
+  for (const [key, file] of Object.entries(LIDAR_CLOUD_MANIFEST)) {
+    const [pid, date] = key.split("|")
+    if (pid !== predioId || !date) continue
+    const week = isoWeekFromYmd(date)
+    if (!week) continue
+    for (const c of cuarteles) {
+      if (drones.some((d) => d.week === week && d.cuartelId === c.id)) continue
       drones.push({
-        id: `drone-${predioId}-${week}-${c.id}`,
+        id: `lidar-${pid}-${week}-${c.id}`,
         week,
         cuartelId: c.id,
-        metric,
-        value: cuartelValues[c.id],
-        layerUrl: `#drone-layer-${c.id}-w${week}`,
-        label: `Vuelo dron · ${c.nombre}`,
+        metric: "ndvi",
+        value: 0,
+        layerUrl: `#lidar-${file}`,
+        label: `Vuelo LiDAR · ${c.nombre} · ${date}`,
+        date,
       })
     }
   }
@@ -315,12 +347,21 @@ export function buildTimeSeries(
   return { weeks, drones }
 }
 
+function isoWeekFromYmd(isoDate: string): number | null {
+  const d = new Date(`${isoDate}T12:00:00Z`)
+  if (Number.isNaN(d.getTime())) return null
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+}
+
 export function formatNdvi(v: number) {
   const sign = v > 0 ? "+" : ""
   return `${sign}${v.toFixed(3)}`
 }
 
-/** Desviación vs histórico según métrica satelital (mock a partir de Δ NDVI del cuartel) */
+/** Desviación vs histórico según métrica satelital */
 export function getMetricDeviation(
   ndviDesviacion: number,
   metric: MetricKey
@@ -329,11 +370,11 @@ export function getMetricDeviation(
     case "ndvi":
       return ndviDesviacion
     case "ndre":
-      return +(ndviDesviacion * 0.88 + 0.008).toFixed(3)
+      return +(ndviDesviacion * 0.92).toFixed(4)
     case "ndmi":
-      return +(ndviDesviacion * 0.75 - 0.015).toFixed(3)
+      return +(ndviDesviacion * 0.85).toFixed(4)
     case "gndvi":
-      return +(ndviDesviacion * 0.92 + 0.004).toFixed(3)
+      return +(ndviDesviacion * 0.95).toFixed(4)
   }
 }
 
@@ -355,4 +396,14 @@ export function haBucket(ha: number) {
   if (ha < 5) return "lt5"
   if (ha <= 10) return "5to10"
   return "gt10"
+}
+
+/** Semanas disponibles para static export (unión de series Vasquez). */
+export function getAvailableWeeks(): number[] {
+  const set = new Set<number>()
+  for (const predioId of Object.keys(VASQUEZ_SERIES)) {
+    const ndvi = seriesFor(predioId, "ndvi")
+    for (const w of Object.keys(ndvi)) set.add(Number(w))
+  }
+  return [...set].filter((w) => Number.isFinite(w)).sort((a, b) => a - b)
 }
