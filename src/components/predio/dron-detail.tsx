@@ -139,7 +139,8 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
   const flightDate = active.date
   const clipRings = cuartelRings(
     selectedCuartel != null ? [selectedCuartel.id] : droneCuartelIds
-  )  const rasterBounds = flightDate
+  )
+  const rasterBounds = flightDate
     ? droneBoundsFor(predioId, flightDate)
     : null
 
