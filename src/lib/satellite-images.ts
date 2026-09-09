@@ -10,8 +10,8 @@ const METRIC_BAND: Record<MetricKey, string> = {
   ndvi: "NDVI",
   ndmi: "NDMI",
   gndvi: "GNDVI",
-  // NDRE no existe en el export; usamos REDEDGE_POSITION como raster asociado
-  ndre: "REDEDGE_POSITION",
+  // Sentinel export usa MNDWI (proxy NDWI de agua / humedad)
+  ndwi: "MNDWI",
 }
 
 function weekToken(week: number) {
@@ -37,7 +37,7 @@ export function satelliteImageUrl(
 
 /**
  * Semanas con raster "current" disponibles para el time-lapse.
- * Los 6 predios de Vasquez tienen W01–W34 exportados para NDVI/NDMI/GNDVI/REDEDGE.
+ * Los 6 predios de Vasquez tienen W01–W34 exportados para NDVI/NDMI/GNDVI/MNDWI.
  */
 export const EVOLUTION_WEEKS = Array.from(
   { length: 34 },

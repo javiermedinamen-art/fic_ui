@@ -34,13 +34,13 @@ export const METRIC_SCALE: Record<MetricKey, MetricScale> = {
     gradient:
       "linear-gradient(90deg, #ffffe5 0%, #f7fcb9 20%, #d9f0a3 40%, #addd8e 55%, #78c679 70%, #41ab5d 85%, #238443 95%, #005a32 100%)",
   },
-  ndre: {
-    // stretch sobre REDEDGE_POSITION (nm) normalizado visualmente en rasters
-    vmin: 700,
-    vmax: 750,
-    colormap: "viridis",
+  ndwi: {
+    // stretch MNDWI (fic_agro metadata)
+    vmin: -1,
+    vmax: -0.045,
+    colormap: "Blues",
     gradient:
-      "linear-gradient(90deg, #440154 0%, #46327e 20%, #365c8d 35%, #277f8e 50%, #1fa187 65%, #4ac16d 80%, #a0da39 92%, #fde725 100%)",
+      "linear-gradient(90deg, #f7fbff 0%, #deebf7 15%, #c6dbef 30%, #9ecae1 45%, #6baed6 60%, #4292c6 75%, #2171b5 90%, #084594 100%)",
   },
 }
 
@@ -68,6 +68,5 @@ export const DRONE_LAYER_SCALE: Record<
 }
 
 export function formatScaleValue(metric: MetricKey, v: number) {
-  if (metric === "ndre") return `${v.toFixed(0)}`
   return v.toFixed(2)
 }

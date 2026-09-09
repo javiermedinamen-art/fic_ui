@@ -12,7 +12,7 @@ import {
 } from "@/lib/vasquez-data"
 import { LIDAR_CLOUD_MANIFEST } from "@/lib/drone-images"
 
-export type MetricKey = "ndvi" | "ndre" | "ndmi" | "gndvi"
+export type MetricKey = "ndvi" | "ndwi" | "ndmi" | "gndvi"
 
 export const METRIC_META: Record<
   MetricKey,
@@ -25,12 +25,12 @@ export const METRIC_META: Record<
       "Normalized Difference Vegetation Index (Sentinel-2). Estima vigor vegetativo a partir de reflectancia en rojo e infrarrojo cercano.",
     unit: "índice",
   },
-  ndre: {
-    label: "Red edge (nm)",
-    short: "REDEDGE",
+  ndwi: {
+    label: "NDWI (MNDWI)",
+    short: "NDWI",
     description:
-      "Posición del red edge (Sentinel-2, nm). Proxy de clorofila / estado del dosel; escala fija 700–750 nm.",
-    unit: "nm",
+      "Modified Normalized Difference Water Index (Sentinel-2). Relacionado con humedad / cuerpos de agua y contraste vegetación–suelo.",
+    unit: "índice",
   },
   ndmi: {
     label: "NDMI",
@@ -369,8 +369,8 @@ export function getMetricDeviation(
   switch (metric) {
     case "ndvi":
       return ndviDesviacion
-    case "ndre":
-      return +(ndviDesviacion * 0.92).toFixed(4)
+    case "ndwi":
+      return +(ndviDesviacion * 0.9).toFixed(4)
     case "ndmi":
       return +(ndviDesviacion * 0.85).toFixed(4)
     case "gndvi":
