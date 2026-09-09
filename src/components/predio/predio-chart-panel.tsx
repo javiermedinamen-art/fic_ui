@@ -37,15 +37,18 @@ import type { Cuartel, MetricKey } from "@/lib/db"
 import { METRIC_META, buildTimeSeries, getPredio } from "@/lib/db"
 import { PredioEvolutionPlayer } from "@/components/predio/predio-evolution-player"
 
+/** Colores de alto contraste para series por cuartel (evita CSS vars similares). */
 const CUARTEL_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-  "#0d9488",
-  "#7c3aed",
-  "#ea580c",
+  "#e11d48", // rose
+  "#2563eb", // blue
+  "#16a34a", // green
+  "#d97706", // amber
+  "#7c3aed", // violet
+  "#0891b2", // cyan
+  "#c026d3", // fuchsia
+  "#ea580c", // orange
+  "#0f766e", // teal
+  "#4f46e5", // indigo
 ]
 
 type PredioChartPanelProps = {
@@ -213,21 +216,29 @@ export function PredioChartPanel({ predioId, cuarteles }: PredioChartPanelProps)
                   Todos
                 </button>
               </div>
-              {cuartelesCultivo.map((c) => (
-                <div key={c.id} className="flex items-center gap-2">
-                  <Checkbox
-                    id={c.id}
-                    checked={selectedCuarteles.includes(c.id)}
-                    onCheckedChange={(v) => toggleCuartel(c.id, !!v)}
-                  />
-                  <Label htmlFor={c.id} className="font-normal">
-                    {c.nombre}
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      ({c.hectareas} ha)
-                    </span>
-                  </Label>
-                </div>
-              ))}
+              {cuartelesCultivo.map((c, i) => {
+                const color = CUARTEL_COLORS[i % CUARTEL_COLORS.length]
+                return (
+                  <div key={c.id} className="flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                      style={{ backgroundColor: color }}
+                    />
+                    <Checkbox
+                      id={c.id}
+                      checked={selectedCuarteles.includes(c.id)}
+                      onCheckedChange={(v) => toggleCuartel(c.id, !!v)}
+                    />
+                    <Label htmlFor={c.id} className="font-normal">
+                      {c.nombre}
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        ({c.hectareas} ha)
+                      </span>
+                    </Label>
+                  </div>
+                )
+              })}
             </fieldset>
           ) : (
             <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
@@ -301,6 +312,7 @@ export function PredioChartPanel({ predioId, cuarteles }: PredioChartPanelProps)
             <PredioEvolutionPlayer
               predioId={predioId}
               predioNombre={getPredio(predioId)?.nombre ?? predioId}
+              cuarteles={cuartelesCultivo}
             />
             <Tabs
               value={mode}
@@ -390,8 +402,8 @@ export function PredioChartPanel({ predioId, cuarteles }: PredioChartPanelProps)
                       dataKey={`c_${id}`}
                       name={c?.nombre ?? id}
                       stroke={color}
-                      strokeWidth={1.75}
-                      dot={{ r: 2.5, strokeWidth: 0, fill: color }}
+                      strokeWidth={2.25}
+                      dot={{ r: 3, strokeWidth: 0, fill: color }}
                       activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff" }}
                     />
                   )

@@ -27,8 +27,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import { ClippedRasterImage } from "@/components/predio/clipped-raster-image"
 import { SatelliteColorLegend } from "@/components/predio/color-legend"
-import { METRIC_META, type MetricKey } from "@/lib/db"
+import { METRIC_META, type Cuartel, type MetricKey } from "@/lib/db"
+import { cuartelRings, s2BoundsFor } from "@/lib/raster-geo"
 import { getEvolutionFrames } from "@/lib/satellite-images"
 
 const SPEEDS = [
@@ -42,17 +44,20 @@ type SpeedId = (typeof SPEEDS)[number]["id"]
 type PredioEvolutionPlayerProps = {
   predioId: string
   predioNombre: string
+  cuarteles: Cuartel[]
 }
 
 export function PredioEvolutionPlayer({
   predioId,
   predioNombre,
+  cuarteles,
 }: PredioEvolutionPlayerProps) {
   const [open, setOpen] = React.useState(false)
   const [metric, setMetric] = React.useState<MetricKey>("ndvi")
   const [index, setIndex] = React.useState(0)
   const [playing, setPlaying] = React.useState(true)
   const [speed, setSpeed] = React.useState<SpeedId>("normal")
+  const [cuartelScope, setCuartelScope] = React.useState<string>("todo")
 
   const frames = React.useMemo(
     () => getEvolutionFrames(predioId, metric),
@@ -60,7 +65,12 @@ export function PredioEvolutionPlayer({
   )
   const frame = frames[index] ?? frames[0]
   const speedMs = SPEEDS.find((s) => s.id === speed)?.ms ?? 400
-
+  const bounds = s2BoundsFor(predioId)
+  const rings = cuartelRings(
+    cuartelScope === "todo"
+      ? cuarteles.map((c) => c.id)
+      : [cuartelScope]
+  )
   React.useEffect(() => {
     setIndex(0)
   }, [predioId, metric])
@@ -97,6 +107,11 @@ export function PredioEvolutionPlayer({
 
   if (!frame) return null
 
+  const scopeLabel =
+    cuartelScope === "todo"
+      ? "Todo el predio"
+      : (cuarteles.find((c) => c.id === cuartelScope)?.nombre ?? cuartelScope)
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
@@ -114,7 +129,7 @@ export function PredioEvolutionPlayer({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Label className="sr-only">Métrica</Label>
           <Select
             value={metric}
@@ -133,22 +148,44 @@ export function PredioEvolutionPlayer({
               ))}
             </SelectContent>
           </Select>
+
+          {cuarteles.length > 1 ? (
+            <Select
+              value={cuartelScope}
+              onValueChange={(v) => {
+                if (v) setCuartelScope(v)
+              }}
+            >
+              <SelectTrigger className="min-w-[11rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todo">Todo el predio</SelectItem>
+                {cuarteles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
         </div>
 
         <AspectRatio
           ratio={4 / 3}
           className="overflow-hidden rounded-xl bg-black ring-1 ring-foreground/10"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            key={frame.url}
+          <ClippedRasterImage
             src={frame.url}
             alt={`Evolución ${METRIC_META[metric].short} · semana ${frame.week}`}
-            className="absolute inset-0 size-full object-contain"
+            bounds={bounds}
+            rings={rings}
+            overlay={
+              <div className="pointer-events-none absolute right-2 bottom-2 z-10 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white">
+                S{frame.week} · {METRIC_META[metric].short} · {scopeLabel}
+              </div>
+            }
           />
-          <div className="pointer-events-none absolute right-2 bottom-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white">
-            S{frame.week} · {METRIC_META[metric].short} · 2026
-          </div>
         </AspectRatio>
 
         <SatelliteColorLegend metric={metric} compact />

@@ -30,6 +30,8 @@ import {
   lidarPointcloudUrl,
   type DroneImageLayer,
 } from "@/lib/drone-images"
+import { cuartelRings, droneBoundsFor } from "@/lib/raster-geo"
+import { ClippedRasterImage } from "@/components/predio/clipped-raster-image"
 import { DroneColorLegend } from "@/components/predio/color-legend"
 import {
   buildTimeSeries,
@@ -119,12 +121,27 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
 
   if (weekDrones.length === 0) notFound()
 
-  const [cuartelId, setCuartelId] = React.useState(weekDrones[0].cuartelId)
+  const droneCuartelIds = React.useMemo(
+    () => [...new Set(weekDrones.map((d) => d.cuartelId))],
+    [weekDrones]
+  )
+
+  const [cuartelScope, setCuartelScope] = React.useState<string>("todo")
 
   const active =
-    weekDrones.find((d) => d.cuartelId === cuartelId) ?? weekDrones[0]
-  const cuartel = cuarteles.find((c) => c.id === active.cuartelId)
+    cuartelScope === "todo"
+      ? weekDrones[0]
+      : (weekDrones.find((d) => d.cuartelId === cuartelScope) ?? weekDrones[0])
+  const selectedCuartel =
+    cuartelScope === "todo"
+      ? null
+      : (cuarteles.find((c) => c.id === cuartelScope) ?? null)
   const flightDate = active.date
+  const clipRings = cuartelRings(
+    selectedCuartel != null ? [selectedCuartel.id] : droneCuartelIds
+  )  const rasterBounds = flightDate
+    ? droneBoundsFor(predioId, flightDate)
+    : null
 
   const rasterLayers = React.useMemo(
     () => availableDroneLayers(predioId, flightDate),
@@ -182,29 +199,30 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
             Vuelo de dron · S{week}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {cuartel?.nombre}
+            {selectedCuartel ? selectedCuartel.nombre : "Todo el predio"}
             {flightDate ? ` · ${flightDate}` : ""} · {layerMeta.description}
           </p>
         </div>
 
-        {weekDrones.length > 1 ? (
+        {droneCuartelIds.length > 1 ? (
           <div className="space-y-1.5">
-            <Label className="text-xs">Cuartel</Label>
+            <Label className="text-xs">Ámbito del mapa</Label>
             <Select
-              value={cuartelId}
+              value={cuartelScope}
               onValueChange={(v) => {
-                if (v) setCuartelId(v)
+                if (v) setCuartelScope(v)
               }}
             >
-              <SelectTrigger className="min-w-[10rem]">
+              <SelectTrigger className="min-w-[12rem]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {weekDrones.map((d) => {
-                  const c = cuarteles.find((x) => x.id === d.cuartelId)
+                <SelectItem value="todo">Todo el predio</SelectItem>
+                {droneCuartelIds.map((id) => {
+                  const c = cuarteles.find((x) => x.id === id)
                   return (
-                    <SelectItem key={d.id} value={d.cuartelId}>
-                      {c?.nombre ?? d.cuartelId}
+                    <SelectItem key={id} value={id}>
+                      {c?.nombre ?? id}
                     </SelectItem>
                   )
                 })}
@@ -239,12 +257,18 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
               className="w-full overflow-hidden rounded-xl bg-muted ring-1 ring-foreground/10"
             >
               {imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={imageUrl}
+                <ClippedRasterImage
                   src={imageUrl}
                   alt={`${layerMeta.label} · ${predio.nombre} · ${flightDate}`}
-                  className="absolute inset-0 size-full object-contain bg-black"
+                  bounds={rasterBounds}
+                  rings={clipRings}
+                  overlay={
+                    <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-md bg-black/55 px-2.5 py-1 text-xs text-white">
+                      {layerMeta.label} ·{" "}
+                      {selectedCuartel?.nombre ?? "Todo el predio"}
+                      {flightDate ? ` · ${flightDate}` : ""}
+                    </div>
+                  }
                 />
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900 px-6 text-center text-slate-200">
@@ -259,10 +283,6 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
                   </p>
                 </div>
               )}
-              <div className="pointer-events-none absolute right-3 bottom-3 rounded-md bg-black/55 px-2.5 py-1 text-xs text-white">
-                {layerMeta.label} · {cuartel?.nombre}
-                {flightDate ? ` · ${flightDate}` : ""}
-              </div>
             </AspectRatio>
             <DroneColorLegend layer={layer} className="mt-2" />
           </>
@@ -286,14 +306,12 @@ export function DronDetail({ predioId, week }: DronDetailProps) {
             <TableBody>
               {weekDrones.map((d, i) => {
                 const c = cuarteles.find((x) => x.id === d.cuartelId)
+                const highlighted =
+                  cuartelScope === "todo" || d.cuartelId === cuartelScope
                 return (
                   <TableRow
                     key={d.id}
-                    className={
-                      d.cuartelId === active.cuartelId
-                        ? "bg-muted/40"
-                        : undefined
-                    }
+                    className={highlighted ? "bg-muted/40" : undefined}
                   >
                     <TableCell className="font-medium">
                       {c?.nombre ?? d.cuartelId}

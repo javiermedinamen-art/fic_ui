@@ -40,6 +40,8 @@ import {
   satelliteImageUrl,
   type SatelliteVariant,
 } from "@/lib/satellite-images"
+import { cuartelRings, s2BoundsFor } from "@/lib/raster-geo"
+import { ClippedRasterImage } from "@/components/predio/clipped-raster-image"
 
 type SemanaDetailProps = {
   predioId: string
@@ -122,27 +124,29 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Cuartel</Label>
-            <Select
-              value={cuartelScope}
-              onValueChange={(v) => {
-                if (v) setCuartelScope(v)
-              }}
-            >
-              <SelectTrigger className="min-w-[12rem]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todo">Todo el predio</SelectItem>
-                {cuartelesCultivo.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {cuartelesCultivo.length > 1 ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Ámbito del mapa</Label>
+              <Select
+                value={cuartelScope}
+                onValueChange={(v) => {
+                  if (v) setCuartelScope(v)
+                }}
+              >
+                <SelectTrigger className="min-w-[12rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">Todo el predio</SelectItem>
+                  {cuartelesCultivo.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
           <div className="flex items-center gap-2">
             {prevWeek ? (
@@ -208,14 +212,26 @@ export function SemanaDetail({ predioId, week }: SemanaDetailProps) {
           variant="historic"
           predioId={predioId}
           week={week}
+          clipCuartelIds={
+            selectedCuartel
+              ? [selectedCuartel.id]
+              : cuartelesCultivo.map((c) => c.id)
+          }
+          scopeLabel={selectedCuartel ? "cuartel" : "predio"}
         />
         <MapBlock
-          title={selectedCuartel ? `Actual · ${selectedCuartel.nombre}` : "Actual"}
+          title={selectedCuartel ? `Actual · ${selectedCuartel.nombre}` : "Actual · todo el predio"}
           value={actualValue}
           metric={metric}
           variant="current"
           predioId={predioId}
           week={week}
+          clipCuartelIds={
+            selectedCuartel
+              ? [selectedCuartel.id]
+              : cuartelesCultivo.map((c) => c.id)
+          }
+          scopeLabel={selectedCuartel ? "cuartel" : "predio"}
         />
       </section>
       <SatelliteColorLegend metric={metric} />
@@ -297,6 +313,8 @@ function MapBlock({
   variant,
   predioId,
   week,
+  clipCuartelIds,
+  scopeLabel,
 }: {
   title: string
   value: number
@@ -304,13 +322,18 @@ function MapBlock({
   variant: SatelliteVariant
   predioId: string
   week: number
+  clipCuartelIds: string[]
+  scopeLabel: string
 }) {
   const [failed, setFailed] = React.useState(false)
   const src = satelliteImageUrl(predioId, week, metric, variant)
+  const bounds = s2BoundsFor(predioId)
+  const rings = cuartelRings(clipCuartelIds)
+  const clipKey = clipCuartelIds.join(",")
 
   React.useEffect(() => {
     setFailed(false)
-  }, [src])
+  }, [src, clipKey])
 
   return (
     <div className="space-y-2">
@@ -325,13 +348,17 @@ function MapBlock({
         className="overflow-hidden rounded-xl bg-muted ring-1 ring-foreground/10"
       >
         {!failed ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={src}
+          <ClippedRasterImage
             src={src}
             alt={`${title} · ${METRIC_META[metric].short} · S${week}`}
-            className="absolute inset-0 size-full object-contain bg-black"
+            bounds={bounds}
+            rings={rings}
             onError={() => setFailed(true)}
+            overlay={
+              <div className="pointer-events-none absolute right-2 bottom-2 z-10 rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-white">
+                S2 · {METRIC_META[metric].short} · S{week} · {scopeLabel}
+              </div>
+            }
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-900 px-4 text-center text-slate-200">
@@ -343,9 +370,6 @@ function MapBlock({
             </p>
           </div>
         )}
-        <div className="pointer-events-none absolute right-2 bottom-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-white">
-          S2 · {METRIC_META[metric].short} · S{week} · stretch fijo
-        </div>
       </AspectRatio>
     </div>
   )
